@@ -24,6 +24,7 @@ about=Create extra points for labels in a labeling layer. From each point you ca
 tags=
 
 homepage=https://github.com/felixvons/Easy-Labeling
+repository=https://github.com/felixvons/Easy-Labeling
 tracker=https://github.com/felixvons/Easy-Labeling/issues
 category=Plugins
 
