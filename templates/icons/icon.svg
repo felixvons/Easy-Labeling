@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="64mm"
+   height="64mm"
+   viewBox="0 0 64.000001 64.000001"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2-2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="icon.svg"
+   inkscape:export-filename="C:\Users\felix\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\easy_labeling\templates\icons\icon.png"
+   inkscape:export-xdpi="99"
+   inkscape:export-ydpi="99">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.979899"
+     inkscape:cx="126.52525"
+     inkscape:cy="127.1608"
+     inkscape:document-units="mm"
+     inkscape:current-layer="g843"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:window-width="1254"
+     inkscape:window-height="1040"
+     inkscape:window-x="1946"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Ebene 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-98.689583,-86.632145)">
+    <g
+       transform="matrix(0.26458333,0,0,0.26458333,98.425,-188.63035)"
+       id="g843">
+      <path
+         d="m 13.5222,1157.5067 12.152208,-18.2279 21.447594,-32.1719 H 231.9209 v 117.5994 H 126.03679 47.122002 L 13.5222,1174.3066 Z"
+         fill="#fff17a"
+         fill-rule="evenodd"
+         stroke="#c5a202"
+         id="path833"
+         style="fill:#ffffff;fill-opacity:1;stroke:#0036ff;stroke-width:16.8262;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         sodipodi:nodetypes="ccccccccc" />
+      <g
+         fill="none"
+         stroke="#000000"
+         stroke-width="0.5"
+         id="g841"
+         transform="matrix(16.7999,0,0,16.7999,-11.67765,-16379.275)">
+        <path
+           d="M 4.9657247,1044.1008 H 6.5 v 2 l -1.75,0.01 v -1.002 l 1.75,-0.016"
+           id="path835" />
+        <path
+           d="m 8,1042.3622 v 3.75 h 1.75 v -2 H 8"
+           id="path837" />
+        <path
+           d="m 13,1044.1122 h -1.5 v 2 H 13"
+           id="path839" />
+      </g>
+    </g>
+  </g>
+</svg>
