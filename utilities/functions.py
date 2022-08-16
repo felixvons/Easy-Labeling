@@ -25,7 +25,7 @@ from qgis.core import (QgsVectorLayer, QgsFeature, QgsExpression,
                        QgsGeometry, QgsCoordinateReferenceSystem)
 from qgis.PyQt.QtCore import QVariant
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from easy_labeling.submodules.qgis.geometry.functions import get_distance_area
 from easy_labeling.submodules.qgis.geometry.line import get_polyline, is_point_in_polylist
@@ -50,7 +50,11 @@ FIELDS = [
 def get_new_position(source_layer: QgsVectorLayer, feature: QgsFeature, dest_layer: QgsVectorLayer,
                      offset: Optional[float] = None) -> Optional[QgsPointXY]:
     """ Returns new point position.
-        Only valid for LineString geometries. Multitype not allowed/possible.
+        Valid for:
+            - line geometries (only single typ)
+            - point geometries (on multi point geometries the first point)
+            - polygons (only center as default)
+
 
         :param layer: source layer
         :param feature: source feature
@@ -65,6 +69,14 @@ def get_new_position(source_layer: QgsVectorLayer, feature: QgsFeature, dest_lay
     area = get_distance_area(dest_crs)
 
     epsilon = EPSILON if dest_crs.isGeographic() else EPSILON_METRES
+
+    if geom.type() == QgsWkbTypes.PointGeometry:
+        if geom.isMultipart():
+            return geom.asMultiPoint()[0]
+        return geom.asPoint()
+
+    if geom.type() == QgsWkbTypes.PolygonGeometry:
+        return geom.center()
 
     poly = get_polyline(geom)
 
@@ -119,19 +131,40 @@ def generate_from_feature(source_layer: QgsVectorLayer, feature: QgsFeature, exp
     point = get_new_position(source_layer, feature, dest_layer, offset)
     if point is None:
         return None
-
     geom = transform_geometry(feature.geometry(),
                               source_layer.dataProvider().crs(),
                               dest_layer.dataProvider().crs())
-    poly = get_polyline(geom)
-    start = poly[0]
-    end = poly[-1]
+
+    if geom.type() == QgsWkbTypes.LineGeometry:
+        poly = get_polyline(geom)
+        start = poly[0]
+        end = poly[-1]
+    else:
+        start = None
+        end = None
+
+    new_feature = create_new_feature(
+        dest_layer,
+        text,
+        expression,
+        f"{source_layer.name()}.{feature.id()}",
+        [[start], [end]] if start else [],
+        point
+    )
+
+    return new_feature
+
+
+def create_new_feature(dest_layer: QgsVectorLayer, text: str, expression: str,
+                       reference: Optional[str], points: List[List[QgsPointXY]],
+                       point: QgsPointXY):
+    """ Create a new labeling feature from given attributes. """
 
     new_feature = QgsFeature(dest_layer.fields())
     new_feature['Text'] = text
     new_feature['Expression'] = expression
-    new_feature['Reference'] = f"{source_layer.name()}.{feature.id()}"
-    new_feature['Points'] = f"[[{start.toString(8)}], [{end.toString(8)}]]"
+    new_feature['Reference'] =reference
+    new_feature['Points'] = str([[p.toString(8) for p in part] for part in points])
     new_feature.setGeometry(QgsGeometry.fromPointXY(point))
 
     return new_feature
