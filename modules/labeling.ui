@@ -88,9 +88,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QgsMapLayerComboBox" name="DrD_PointLayers"/>
-          </item>
           <item row="1" column="2">
            <widget class="QToolButton" name="But_Create_Layer">
             <property name="text">
@@ -108,6 +105,9 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="QgsMapLayerComboBox" name="DrD_LabelingLayers"/>
+          </item>
           <item row="2" column="1">
            <widget class="QPushButton" name="But_Refresch_Selected">
             <property name="text">
@@ -124,19 +124,6 @@
           <string>Erstellen</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="0">
-           <widget class="QLabel" name="label">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Linien-Layer:</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0" colspan="2">
            <widget class="QLabel" name="Label_Status_Create">
             <property name="text">
@@ -147,15 +134,25 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Referenz-Layer:</string>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="1">
-           <widget class="QgsMapLayerComboBox" name="DrD_LineLayers"/>
+           <widget class="QgsMapLayerComboBox" name="DrD_ReferenceLayers"/>
           </item>
           <item row="2" column="0" colspan="2">
            <widget class="QWidget" name="Widget_Create" native="true">
             <layout class="QGridLayout" name="gridLayout_6">
-             <item row="0" column="0">
-              <widget class="QgsFieldExpressionWidget" name="Edit_New_Expression"/>
-             </item>
              <item row="1" column="0">
               <widget class="QPushButton" name="But_Create_From_Selection">
                <property name="text">
@@ -163,7 +160,20 @@
                </property>
               </widget>
              </item>
+             <item row="0" column="0">
+              <widget class="QgsFieldExpressionWidget" name="Edit_New_Expression"/>
+             </item>
             </layout>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
+           <widget class="QPushButton" name="But_Create_Manual">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Neuen Beschriftungspunkt manuell ohne Layerbezug erstellen.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Manuell erstellen</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -175,7 +185,37 @@
           <string>Bearbeiten</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
-          <item row="4" column="0">
+          <item row="1" column="0">
+           <widget class="QLabel" name="Label_Edit_Feature">
+            <property name="text">
+             <string>TextLabel</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QPushButton" name="But_Save">
+            <property name="text">
+             <string>Speichern</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="Label_Status_Edit">
+            <property name="text">
+             <string>TextLabel</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QgsFieldExpressionWidget" name="Edit_Expression"/>
+          </item>
+          <item row="5" column="0">
            <widget class="QWidget" name="widget" native="true">
             <property name="maximumSize">
              <size>
@@ -184,6 +224,16 @@
              </size>
             </property>
             <layout class="QGridLayout" name="gridLayout_3">
+             <item row="0" column="0">
+              <widget class="QLabel" name="Label_Edit_Feature_2">
+               <property name="text">
+                <string>Punkte für Pfeilrichtung:</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
              <item row="1" column="0">
               <widget class="QListWidget" name="List_Points">
                <property name="selectionMode">
@@ -236,48 +286,11 @@
                </layout>
               </widget>
              </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="Label_Edit_Feature_2">
-               <property name="text">
-                <string>Punkte für Pfeilrichtung:</string>
-               </property>
-               <property name="wordWrap">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QgsFieldExpressionWidget" name="Edit_Expression"/>
-          </item>
-          <item row="5" column="0">
-           <widget class="QPushButton" name="But_Save">
-            <property name="text">
-             <string>Speichern</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="Label_Status_Edit">
-            <property name="text">
-             <string>TextLabel</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="Label_Edit_Feature">
-            <property name="text">
-             <string>TextLabel</string>
-            </property>
-            <property name="wordWrap">
-             <bool>true</bool>
-            </property>
-           </widget>
+          <item row="4" column="0">
+           <widget class="QPlainTextEdit" name="Edit_Manual_Expression"/>
           </item>
          </layout>
         </widget>

@@ -23,7 +23,7 @@ from qgis.core import (QgsApplication, QgsMapLayerProxyModel, QgsVectorLayer,
                        QgsProject, QgsPointXY, QgsGeometry)
 from qgis.gui import QgsDockWidget, QgsFieldExpressionWidget
 
-from ..utilities.functions import FIELDS, get_label_text, create_new_layer, generate_from_feature, get_reference_data
+from ..utilities.functions import FIELDS, get_label_text, create_new_layer, generate_from_feature, get_reference_data, create_new_feature
 
 from ..submodules.module_base.base_class import UiModuleBase
 from ..submodules.module_base.pyqt.functions import set_label_status, set_label_error
@@ -51,12 +51,16 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
     def _setup(self):
         """ setup some options """
 
+        # reload loadable layers
+        self.connect(QgsProject.instance().layersAdded, self._load_layers)
+        self.connect(QgsProject.instance().layersRemoved, self._load_layers)
+
         self.replace_widget_with_class(self.Edit_New_Expression, ExpressionWidget)
         self.replace_widget_with_class(self.Edit_Expression, ExpressionWidget)
 
         # set selectable layer types
-        self.DrD_PointLayers.setFilters(QgsMapLayerProxyModel.PointLayer)
-        self.DrD_LineLayers.setFilters(QgsMapLayerProxyModel.LineLayer)
+        self.DrD_LabelingLayers.setFilters(QgsMapLayerProxyModel.PointLayer)
+        self.DrD_ReferenceLayers.setFilters(QgsMapLayerProxyModel.VectorLayer)
 
         # add button icons
         self.But_Add_Point.setIcon(self.getThemeIcon("console/iconNewTabEditorConsole.svg"))
@@ -64,13 +68,15 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
         self.But_Create_Layer.setIcon(self.getThemeIcon("console/iconNewTabEditorConsole.svg"))
         self.But_Create_From_Selection.setIcon(self.getThemeIcon("mActionProcessSelected.svg"))
         self.But_Refresch_Selected.setIcon(self.getThemeIcon("mActionProcessSelected.svg"))
+        self.But_Create_Manual.setIcon(self.getThemeIcon("cursors/mCapturePoint.svg"))
         self.But_Save.setIcon(self.getThemeIcon("mActionFileSave.svg"))
 
         self.connect(self.Edit_Expression.exprEdited, self._show_feature_expr_result)
-        self.connect(self.DrD_PointLayers.layerChanged, self._point_layer_changed)
-        self.connect(self.DrD_LineLayers.layerChanged, self._line_layer_changed)
+        self.connect(self.DrD_LabelingLayers.layerChanged, self._point_layer_changed)
+        self.connect(self.DrD_ReferenceLayers.layerChanged, self._line_layer_changed)
         self.connect(self.But_Create_Layer.clicked, self._create_new_layer)
         self.connect(self.But_Create_From_Selection.clicked, self._create_from_selected)
+        self.connect(self.But_Create_Manual.clicked, self._create_manual)
         self.connect(self.But_Refresch_Selected.clicked, self._refresh_selected)
         self.connect(self.List_Points.itemSelectionChanged, self._selected_point_pos_changed)
         self.connect(self.But_Remove_Point.clicked, self._remove_point_pos)
@@ -79,29 +85,62 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
 
         self.connect(self.iface.mapCanvas().selectionChanged, self._point_feature_selected)
 
+        self._load_layers()
+
+    def _load_layers(self, *args):
+        """ Reloads exclude list for layer dropdowns """
+        exclude_labeling_layers = []
+        exclude_reference_layers = []
+
+        layers = QgsProject.instance().mapLayers().values()
+        for layer in layers:
+            if self.is_point_layer_valid(layer):
+                # incompatible reference layers
+                exclude_reference_layers.append(layer)
+            else:
+                # incompatible labeling layers
+                exclude_labeling_layers.append(layer)
+
+        self.DrD_LabelingLayers.setExceptedLayerList(exclude_labeling_layers)
+        self.DrD_ReferenceLayers.setExceptedLayerList(exclude_reference_layers)
+
     def _save_point(self, checked: bool):
         set_label_error(self.Label_Status_Edit, "")
-
-        if not self.Edit_Expression.isValidExpression(self.Edit_Expression.currentText()):
-            set_label_error(self.Label_Status_Edit, "Ausdruck fehlerhaft")
-            return
 
         if self._point_feature is None:
             return
 
+        if self.Edit_Expression.isVisible():
+            if not self.Edit_Expression.isValidExpression(self.Edit_Expression.currentText()):
+                set_label_error(self.Label_Status_Edit, "Ausdruck fehlerhaft")
+                return
+
+        if self.Edit_Manual_Expression.isVisible():
+            if not self.Edit_Manual_Expression.toPlainText().strip():
+                set_label_error(self.Label_Status_Edit, "Bitte Beschriftung eingeben.")
+                return
+
         index_map = self.point_layer.dataProvider().fieldNameMap()
         update_map = {}
-        reference = get_reference_data(self._point_feature)
-        if reference:
-            text = get_label_text(reference[1], self.Edit_Expression.currentText())
-            update_map[index_map["Text"]] = text
-        else:
-            reply = self.question(
-                "Referenz nicht gefunden",
-                "Linienreferenz nicht gefunden. Speichern fortfahren (Text wird nicht aktualisiert)?"
-            )
-            if reply != self.Yes:
-                return
+        if self.Edit_Expression.isVisible():
+            reference = get_reference_data(self._point_feature)
+            if reference:
+                text = get_label_text(reference[1], self.Edit_Expression.currentText())
+                update_map[index_map["Text"]] = text
+            else:
+                reply = self.question(
+                    "Referenz nicht gefunden",
+                    "Linienreferenz nicht gefunden. Speichern fortfahren (Text wird nicht aktualisiert)?"
+                )
+                if reply != self.Yes:
+                    return
+
+        if self.Edit_Manual_Expression.isVisible():
+            update_map[index_map["Text"]] = self.Edit_Manual_Expression.toPlainText().strip()
+
+        if not update_map:
+            set_label_error(self.Label_Status_Edit, "Keine Attribute zum gespeichern gefunden.")
+            return
 
         points = []
         for row in range(self.List_Points.count()):
@@ -129,11 +168,13 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
     def _maptool_moved(self, point: QgsPointXY):
         self._draw_tool.remove_all_drawings()
 
-        if not self._point_feature:
+        if not self._point_feature or not self.point_layer:
             return
 
+        current_point = self.point_layer.getGeometry(self._point_feature.id()).asPoint()
+
         self._draw_tool.create_rubber_band(
-            QgsGeometry.fromPolylineXY([self._point_feature.geometry().asPoint(), point]),
+            QgsGeometry.fromPolylineXY([current_point, point]),
             self.point_layer)
 
     def _maptool_aborted(self):
@@ -160,30 +201,67 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
 
         self.But_Remove_Point.setEnabled(True)
 
+    def _create_manual(self, *args):
+        """ Create labeling point without layer referencing.
+            Activates map tool to select position on map.
+        """
+        tool = MapToolQgisSnap(self.iface, self.point_layer)
+        tool.clicked.connect(self._create_manual_point_clicked)
+        tool.aborted.connect(self._maptool_aborted)
+
+    def _create_manual_point_clicked(self, point: QgsPointXY):
+        """ Tool clicked """
+        set_label_error(self.Label_Status_Create, "")
+        new_feature = create_new_feature(
+            self.point_layer,
+            "< Beschriftung fehlt >",
+            "",
+            None,
+            [],
+            point
+        )
+
+        """if self.point_layer.isEditable():
+            if self.point_layer.addFeature(new_feature):
+                bbox = QgsGeometry.fromPointXY(point).boundingBox()
+                bbox.grow(0.01)
+                self.point_layer.selectByRect(bbox)
+            else:
+                self.iface.messageBar().pushWarning("Easy Labeling", f"Erstellen eines neuen Punktes fehlgeschlagen.")
+        else:"""
+        prov = self.point_layer.dataProvider()
+        ok, features = prov.addFeatures([new_feature])
+        if ok:
+            self.point_layer.reload()
+            self.point_layer.selectByIds([features[0].id()])
+        else:
+            self.iface.messageBar().pushWarning("Easy Labeling", f"Erstellen eines neuen Punktes fehlgeschlagen ({prov.lastError()})")
+
     def _create_from_selected(self, checked: bool):
+        """ Create labeling point with reference to selected feature """
         set_label_error(self.Label_Status_Create, "")
 
         if not self.Edit_New_Expression.isValidExpression(self.Edit_New_Expression.currentText()):
             set_label_error(self.Label_Status_Create, "Ausdruck fehlerhaft")
             return
 
-        if not self.line_layer.selectedFeatureCount():
+        if not self.reference_layer.selectedFeatureCount():
             set_label_error(self.Label_Status_Create, "Keine Objekte gewählt")
             return
 
-        if self.line_layer.selectedFeatureCount() > 1:
+        if self.reference_layer.selectedFeatureCount() > 1:
 
             reply = self.question(
                 "Beschriftungspunkte erstellen",
-                f"Beschriftungspunkte für {self.line_layer.selectedFeatureCount()} gewählte Objekte erstellen?"
+                f"Beschriftungspunkte für {self.reference_layer.selectedFeatureCount()} gewählte Objekte erstellen?"
             )
 
             if reply != self.Yes:
                 return
 
         created = []
-        for feature in self.line_layer.selectedFeatures():
-            f = generate_from_feature(self.line_layer, feature,
+        for feature in self.reference_layer.selectedFeatures():
+            f = generate_from_feature(self.reference_layer, feature,
                                       self.Edit_New_Expression.currentText(),
                                       self.point_layer, 10)
             ok, features = self.point_layer.dataProvider().addFeatures([f])
@@ -238,7 +316,6 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
             self.iface.messageBar().pushWarning("Easy Labeling", msg)
             self.point_layer.selectByIds(errors)
 
-
     def _create_new_layer(self, checked: bool):
         save_path, _ = QFileDialog.getSaveFileName(
             self.iface.mainWindow(),
@@ -256,7 +333,7 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
         QgsProject.instance().addMapLayer(layer, False)
         root = QgsProject.instance().layerTreeRoot()
         root.insertLayer(0, layer)
-        self.DrD_PointLayers.setLayer(layer)
+        self.DrD_LabelingLayers.setLayer(layer)
 
     def _point_layer_changed(self, layer: QgsVectorLayer):
         self._reset()
@@ -273,7 +350,8 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
         else:
             set_label_status(self.Label_Edit_Preview, text)
 
-    def _is_point_layer_valid(self, layer: QgsVectorLayer) -> bool:
+    @classmethod
+    def is_point_layer_valid(cls, layer: QgsVectorLayer) -> bool:
         if not layer:
             return False
 
@@ -285,8 +363,8 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
         return True
 
     def _reset(self):
-        point_layer = self.DrD_PointLayers.currentLayer()
-        line_layer = self.DrD_LineLayers.currentLayer()
+        point_layer = self.DrD_LabelingLayers.currentLayer()
+        reference_layer = self.DrD_ReferenceLayers.currentLayer()
 
         set_label_status(self.Label_Status, "")
         set_label_status(self.Label_Status_Create, "")
@@ -297,6 +375,7 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
 
         self._point_feature = None
         self.Edit_Expression.setExpression("")
+        self.Edit_Manual_Expression.setPlainText("")
         self.Edit_Expression.setLayer(None)
 
         self.GroupBox_Create.setEnabled(False)
@@ -309,25 +388,26 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
             set_label_error(self.Label_Status, "Bitte Beschriftungslayer wählen")
             return
 
-        if not self._is_point_layer_valid(point_layer):
+        if not self.is_point_layer_valid(point_layer):
             set_label_error(self.Label_Status, "Beschriftungslayer ist nicht kompatibel")
             return
 
         self.GroupBox_Create.setEnabled(True)
         self.But_Refresch_Selected.setEnabled(True)
 
-        if line_layer:
-            self.Edit_New_Expression.setLayer(line_layer)
+        if reference_layer:
+            self.Edit_New_Expression.setLayer(reference_layer)
             self.Widget_Create.setEnabled(True)
             self.point_layer.selectByIds(self.point_layer.selectedFeatureIds())
         else:
             self.Widget_Create.setEnabled(False)
             set_label_error(self.Label_Status_Create, "Bitte einen Linienlayer wählen")
 
-
     def _point_feature_selected(self, layer: QgsVectorLayer):
+        """ Load data from selected point feature """
 
         self._point_feature = None
+        self.Edit_Manual_Expression.setPlainText("")
         self.Edit_Expression.setExpression("")
         self.Edit_Expression.setLayer(None)
         self.List_Points.clear()
@@ -355,17 +435,37 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
             return
 
         self._point_feature = self.point_layer.getFeature(selected[0])
-        self.Edit_Expression.setLayer(self.point_layer)
-        self.Edit_Expression.setExpression(self._point_feature['Expression'])
-        set_label_status(self.Label_Edit_Feature,
-                         f"Punkt: {selected[0]}\n"
-                         f"Reference: {self._point_feature['Reference']}")
+
+        expression = self._point_feature['Expression']
+        reference = self._point_feature['Reference']
+        text = self._point_feature['Text']
+        if isinstance(expression, str):
+            expression = expression.strip()
+
+        if expression or reference:
+            # expression or reference set
+            self.Edit_Expression.setLayer(self.reference_layer)
+            self.Edit_Expression.setExpression(expression)
+            set_label_status(self.Label_Edit_Feature,
+                            f"Punkt: {selected[0]}\n"
+                            f"Reference: {reference}")
+            self.Edit_Manual_Expression.hide()
+            self.Edit_Expression.show()
+        else:
+            # no expression and no reference set, activate manual fields
+            self.Edit_Manual_Expression.show()
+            self.Edit_Expression.hide()
+            self.Edit_Manual_Expression.setPlainText(text)
+            set_label_status(self.Label_Edit_Feature,
+                            f"Punkt: {selected[0]} (ohne Referenzlayer)\n"
+                            f"Manuelle Textbearbeitung.")
 
         try:
             points = loads(self._point_feature['Points'])
         except:
             points = []
 
+        # load points to view
         for point in points:
             item = QListWidgetItem(f"{point[0]},{point[1]}")
             self.List_Points.addItem(item)
@@ -375,20 +475,22 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
         reference = get_reference_data(self._point_feature)
         self._selected_point_pos_changed()
 
-        if reference is not None:
+        if reference is not None and reference:
+            # reference found and layer reference active
             self.iface.mapCanvas().flashFeatureIds(reference[0], [reference[1].id()], flashes=4)
-        else:
+        elif reference:
+            # reference active, but feature not found
             msg = f"Referenzierte Linie '{self._point_feature['Reference']}' nicht gefunden"
             self.iface.messageBar().pushWarning("Easy Labeling", msg)
             set_label_error(self.Label_Status_Edit, msg)
 
     @property
     def point_layer(self):
-        return self.DrD_PointLayers.currentLayer()
+        return self.DrD_LabelingLayers.currentLayer()
 
     @property
-    def line_layer(self):
-        return self.DrD_LineLayers.currentLayer()
+    def reference_layer(self):
+        return self.DrD_ReferenceLayers.currentLayer()
 
     @classmethod
     def tr_(cls, text: str):
