@@ -11,7 +11,7 @@ icon=templates/icons/icon.png
 name_menu_bar=Easy Labeling
 
 # qgisMinimumVersion: minimum compatible QGIS version number
-qgisMinimumVersion=3.22
+qgisMinimumVersion=3.16
 
 # some default plugin information
 description=Create Labeling Points for labeling line sections
