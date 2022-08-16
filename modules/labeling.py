@@ -297,10 +297,15 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
         update_map = {}
         errors = []
         for feature in self.point_layer.selectedFeatures():
+            expression = feature['Expression']
+            reference = feature['Reference']
+            if not reference and not expression:
+                continue
+
             reference = get_reference_data(feature)
             if reference is not None:
                 layer, line_feature = reference
-                text = get_label_text(line_feature, feature['Expression'])
+                text = get_label_text(line_feature, expression)
                 update_map[feature.id()] = {index_map['Text']: text}
             else:
                 errors.append(feature.id())
@@ -315,6 +320,9 @@ class LabelingMenu(UiModuleBase, QgsDockWidget, FORM_CLASS):
             QMessageBox.warning(self.iface.mainWindow(), "Easy Labeling", msg)
             self.iface.messageBar().pushWarning("Easy Labeling", msg)
             self.point_layer.selectByIds(errors)
+
+        if not update_map and not errors:
+            self.iface.messageBar().pushSuccess("Easy Labeling", f"Keine Objekte aktualisiert.")
 
     def _create_new_layer(self, checked: bool):
         save_path, _ = QFileDialog.getSaveFileName(
